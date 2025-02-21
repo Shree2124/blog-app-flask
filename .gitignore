@@ -1,0 +1,60 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environment
+venv/
+env/
+*.venv/
+Pipfile
+Pipfile.lock
+
+# Environment variables
+.env
+*.env
+
+# Flask cache, logs, and database
+instance/
+*.log
+*.sqlite3
+*.db
+*.sqlite
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Pytest / Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Build / Distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+*.manifest
+*.spec
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Deployment / Container files
+.DS_Store
+*.pid
+*.tar.gz
+*.zip
+
+# Render / Docker / CI
+docker-compose.yml
+*.dockerenv

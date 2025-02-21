@@ -39,7 +39,7 @@ def create():
     return render_template("create_post.html", user=current_user)
 
 
-@views.route("/delete-post/<id>", methods=["DELETE"])
+@views.route("/delete-post/<id>", methods=["POST", "GET"])
 @login_required
 def delete_post(id):
     try:
@@ -47,7 +47,7 @@ def delete_post(id):
 
         if not post:
             flash("Post doest not exist", category="error")
-        elif current_user.id != post.id:
+        elif current_user.id != post.author:
             flash("You do not have permission to delete this post.", category="error")
         else:
             db.session.delete(post)
@@ -103,7 +103,7 @@ def create_comment(post_id):
         return redirect(url_for("view.home"))
 
 
-@views.route("/delete-comment/<comment_id>", methods=["POST", "GET"])
+@views.route("/delete-comment/<comment_id>", methods=["DELETE", "GET"])
 @login_required
 def delete_comment(comment_id):
     try:

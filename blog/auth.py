@@ -83,5 +83,5 @@ def register():
 @auth.route("/logout")
 @login_required
 def logout():
-    logout_user(current_user)
-    return redirect(url_for("views.home"))
+    logout_user()
+    return redirect(url_for("view.home"))

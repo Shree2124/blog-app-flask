@@ -8,6 +8,7 @@ from flask import (
     flash,
     abort,
     session,
+    current_app
 )
 from . import db
 from .models import User
@@ -21,7 +22,10 @@ from google_auth_oauthlib.flow import Flow
 from pip._vendor import cachecontrol
 import google.auth.transport.requests
 from dotenv import load_dotenv
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer
 
+mail = Mail()
 load_dotenv()
 
 auth = Blueprint("auth", __name__)
@@ -29,6 +33,7 @@ auth = Blueprint("auth", __name__)
 EMAIL_REGEX = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+serializer = URLSafeTimedSerializer('helloworld')
 
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -179,6 +184,54 @@ def register():
 
     return render_template("signup.html", user=current_user)
 
+
+@auth.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email")
+        try:
+            user = User.query.filter_by(email=email).first()
+            if user:
+                
+                token =  serializer.dumps(email, salt="password-reset")
+                reset_link = url_for('auth.reset_password', token=token, _external=True)
+                
+                msg = Message('Password Reset Request', recipients=[email])
+                msg.body = f'Click the link to reset your password: {reset_link}'
+                mail.send(msg)
+                
+                flash("Password reset instructions sent to your email.", category="success")
+                return redirect(url_for("view.login"))
+            else:
+                flash('Email not found.', category='error')
+        except Exception as e:
+            print("Error ",e)
+            flash("Error while sending email", category="error")
+    return render_template("forgot_password.html", user=current_user)
+
+
+@auth.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    try: 
+        email= serializer.loads(token, salt='password-reset', max_age=3600)
+    except Exception as e:
+        flash('The reset link is invalid or expired.', 'danger')
+        return redirect(url_for('auth.forgot_password'))
+    
+    if request.method == 'POST':
+        new_password = request.form['password']
+        hashed_password = generate_password_hash(new_password, method="scrypt")
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.password = hashed_password
+            db.session.commit()
+            flash('Your password has been updated.', 'success')
+            return redirect(url_for('auth.login'))
+        else:
+            flash('User not found.', 'danger')
+            return redirect(url_for('auth.forgot_password'))
+    return render_template('reset_password.html', user=current_user)
 
 @auth.route("/logout")
 @login_required

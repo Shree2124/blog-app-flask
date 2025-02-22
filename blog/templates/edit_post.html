@@ -1,39 +1,49 @@
 {% extends 'base.html' %}
+
 {% block title %}
   Edit Post
 {% endblock %}
 
 {% block content %}
-  <h1 align="center">Edit Your Post</h1>
+<div class="container mt-4">
+  <h1 class="text-center">Edit Your Post</h1>
 
-  <form method="POST" enctype="multipart/form-data">
-    <label for="text"><b>Edit Post:</b></label>
-    <textarea name="text" id="text" class="form-control">{{ post.text }}</textarea>
-    <br />
-  
+  <form method="POST" enctype="multipart/form-data" class="mt-4">    
+    <div class="mb-3">
+      <label for="text" class="form-label"><b>Edit Post:</b></label>
+      <textarea name="text" id="text" class="form-control" rows="4">{{ post.text }}</textarea>
+    </div>
+
+
     {% if post.image %}
-      <div class="mb-3">
+      <div class="mb-3 text-center">
         <p><b>Current Image:</b></p>
-        <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="img-fluid rounded" alt="Post Image" width="300" />
-        <br />
-        <input type="checkbox" name="remove_image" id="remove_image" value="true" />
-        <label for="remove_image">Remove current image</label>
-        <br />
+        <img src="{{ url_for('static', filename='uploads/' + post.image) }}" 
+             class="img-fluid rounded shadow-sm" 
+             alt="Post Image"
+             style="max-width: 100%; height: auto; max-height: 400px; object-fit: contain;">
+        
+        <div class="form-check mt-2">
+          <input type="checkbox" name="remove_image" id="remove_image" class="form-check-input" value="true">
+          <label for="remove_image" class="form-check-label">Remove current image</label>
+        </div>
       </div>
     {% endif %}
-  
 
     <div class="mb-3">
-      <label for="image"><b>Upload New Image:</b></label>
-      <input type="file" name="image" id="image" class="form-control" accept="image/*" />
+      <label for="image" class="form-label"><b>Upload New Image:</b></label>
+      <input type="file" name="image" id="image" class="form-control" accept="image/*">
     </div>
-  
-    <div align="center">
+
+    <div class="text-center">
       <button type="submit" class="btn btn-lg btn-primary">Update</button>
     </div>
   </form>
-  <br />
-  <div align="center">
-    <a href="/home"><button type="button" class="btn btn-lg btn-secondary">Back</button></a>
+
+  <div class="text-center mt-4">
+    <a href="/home">
+      <button type="button" class="btn btn-lg btn-secondary">Back</button>
+    </a>
   </div>
+</div>
 {% endblock %}

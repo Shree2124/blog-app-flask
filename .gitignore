@@ -9,6 +9,7 @@ env/
 *.venv/
 Pipfile
 Pipfile.lock
+json/
 
 # Environment variables
 .env
@@ -58,3 +59,4 @@ dist/
 # Render / Docker / CI
 docker-compose.yml
 *.dockerenv
+

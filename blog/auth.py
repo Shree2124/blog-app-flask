@@ -1,13 +1,114 @@
 import re
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import (
+    Blueprint,
+    render_template,
+    redirect,
+    url_for,
+    request,
+    flash,
+    abort,
+    session,
+)
 from . import db
 from .models import User
+import os
+import pathlib
+import requests
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from google.oauth2 import id_token
+from google_auth_oauthlib.flow import Flow
+from pip._vendor import cachecontrol
+import google.auth.transport.requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 auth = Blueprint("auth", __name__)
 
-EMAIL_REGEX = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+EMAIL_REGEX = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
+
+if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+    raise ValueError("Missing Google OAuth environment variables")
+
+flow = Flow.from_client_config(
+    {
+        "web": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+    },
+    scopes=[
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "openid",
+    ],
+)
+flow.redirect_uri = GOOGLE_REDIRECT_URI
+
+
+@auth.route("/google-login")
+def google_login():
+    authorization_url, state = flow.authorization_url()
+    session["state"] = state
+    return redirect(authorization_url)
+
+
+@auth.route("/auth/google/callback")
+def callback():
+    try:
+        flow.fetch_token(authorization_response=request.url)
+
+        if not session["state"] == request.args["state"]:
+            flash("Authorization failed!", category="error")
+            return redirect(url_for("auth.login"))
+
+        credentials = flow.credentials
+        request_session = requests.session()
+        cached_session = cachecontrol.CacheControl(request_session)
+        token_request = google.auth.transport.requests.Request(session=cached_session)
+
+        id_info = id_token.verify_oauth2_token(
+            id_token=credentials._id_token,
+            request=token_request,
+            audience=GOOGLE_CLIENT_ID,
+        )
+
+        email = id_info.get("email")
+        google_id = id_info.get("sub")
+        username = id_info.get("name")
+
+        try:
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                new_user = User(
+                    email=email, username=username, google_id=google_id, password=None
+                )
+                db.session.add(new_user)
+                db.session.commit()
+                user = new_user
+
+            login_user(user)
+            flash("Logged in with Google!", category="success")
+            return redirect(url_for("view.home"))
+        except Exception as e:
+            print("Error:", e)
+            flash("Error while logging in", category="error")
+            return redirect("/home")
+        return redirect("/home")
+    except Exception as e:
+        print("Error ", e)
+        flash("some error occurred", category="error")
+        return redirect("/home")
 
 
 @auth.route("/login", methods=["GET", "POST"])
@@ -15,6 +116,7 @@ def login():
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
+        user = None
         try:
             user = User.query.filter_by(email=email).first()
         except Exception as e:
@@ -29,7 +131,7 @@ def login():
                 flash("Password is incorrect", category="error")
         else:
             flash("Email does not exist", category="error")
-    return render_template("login.html", user = current_user)
+    return render_template("login.html", user=current_user)
 
 
 @auth.route("/sign-up", methods=["GET", "POST"])
@@ -41,17 +143,14 @@ def register():
         password2 = request.form.get("password2")
 
         try:
-            # Validate email format
             if not re.match(EMAIL_REGEX, email):
                 flash("Invalid email format.", category="error")
 
-            # Check if email or username already exists
             elif User.query.filter_by(email=email).first():
                 flash("Email is already in use.", category="error")
             elif User.query.filter_by(username=username).first():
                 flash("Username is already in use.", category="error")
 
-            # Validate other fields
             elif password1 != password2:
                 flash("Passwords don't match!", category="error")
             elif len(username) < 2:
@@ -61,7 +160,7 @@ def register():
 
             else:
                 try:
-                
+
                     new_user = User(
                         email=email,
                         username=username,
@@ -73,12 +172,13 @@ def register():
                     flash("User created!")
                     return redirect(url_for("view.home"))
                 except Exception as e:
-                    print("Error: ",e)
+                    print("Error: ", e)
 
         except Exception as e:
             print("Error: ", e)
 
-    return render_template("signup.html", user = current_user)
+    return render_template("signup.html", user=current_user)
+
 
 @auth.route("/logout")
 @login_required

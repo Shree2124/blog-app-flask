@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}
+  Edit Post
+{% endblock %}
+
+{% block content %}
+  <h1 align="center">Edit Your Post</h1>
+
+  <form method="POST" enctype="multipart/form-data">
+    <label for="text"><b>Edit Post:</b></label>
+    <textarea name="text" id="text" class="form-control">{{ post.text }}</textarea>
+    <br />
+  
+    {% if post.image %}
+      <div class="mb-3">
+        <p><b>Current Image:</b></p>
+        <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="img-fluid rounded" alt="Post Image" width="300" />
+        <br />
+        <!-- Checkbox to remove current image -->
+        <input type="checkbox" name="remove_image" id="remove_image" value="true" />
+        <label for="remove_image">Remove current image</label>
+        <br />
+      </div>
+    {% endif %}
+  
+    <!-- File input for new image upload -->
+    <div class="mb-3">
+      <label for="image"><b>Upload New Image:</b></label>
+      <input type="file" name="image" id="image" class="form-control" accept="image/*" />
+    </div>
+  
+    <div align="center">
+      <button type="submit" class="btn btn-lg btn-primary">Update</button>
+    </div>
+  </form>
+  <br />
+  <div align="center">
+    <a href="/home"><button type="button" class="btn btn-lg btn-secondary">Back</button></a>
+  </div>
+{% endblock %}

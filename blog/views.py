@@ -1,9 +1,18 @@
+import os
 from flask import Blueprint, jsonify, render_template, request, flash, redirect, url_for
 from flask_login import login_required, current_user
+
 from .models import Post, User, Comments, Like
 from . import db
+from werkzeug.utils import secure_filename
 
 views = Blueprint("view", __name__)
+
+UPLOAD_FOLDER = 'blog/static/uploads/'  
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @views.route("/home")
@@ -24,18 +33,38 @@ def home():
 def create():
     if request.method == "POST":
         text = request.form.get("text")
+        image = request.files.get("image")
+        
+        print("Received request.files:", request.files)
+        print("Image file object:", image)
+
+        filename = None
+        if image and allowed_file(image.filename):
+            try:
+                filename = secure_filename(image.filename)
+                image_path = os.path.join(UPLOAD_FOLDER, filename)
+                
+                print(f"Saving file to: {image_path}")
+                image.save(image_path)
+
+                flash("File uploaded successfully", category="success")
+            except Exception as e:
+                print("Error while uploading file:", e)
+                flash("File upload failed", category="error")
+
         if not text:
             flash("Post cannot be empty", category="error")
         else:
             try:
-                post = Post(text=text, author=current_user.id)
-                db.session.add(post)
+                new_post = Post(author=current_user.id, text=text, image=filename)
+                db.session.add(new_post)
                 db.session.commit()
                 flash("Post created successfully", category="success")
                 return redirect(url_for("view.home"))
             except Exception as e:
-                print("error: ", e)
+                print("Database error:", e)
                 flash("Some error occurred", category="error")
+
     return render_template("create_post.html", user=current_user)
 
 
@@ -59,6 +88,54 @@ def delete_post(id):
         flash("Some error occurred ", category="error")
 
 
+@views.route("/edit-post/<post_id>", methods=["GET", "POST"])
+@login_required
+def edit_post(post_id):
+    post = Post.query.get_or_404(post_id)
+
+    if post.author != current_user.id:
+        flash("You do not have permission to edit this post.", category="error")
+        return redirect(url_for("view.home"))
+
+    if request.method == "POST":
+        text = request.form.get("text")
+        remove_image = request.form.get("remove_image") 
+        image = request.files.get("image")
+
+        if not text:
+            flash("Post text cannot be empty!", category="error")
+            return redirect(url_for("views.edit_post", post_id=post.id))
+
+        post.text = text 
+
+        if remove_image and post.image:
+            old_image_path = os.path.join(UPLOAD_FOLDER, post.image)
+            if os.path.exists(old_image_path):
+                os.remove(old_image_path)
+            post.image = None
+
+        if image and allowed_file(image.filename):
+            try:
+                filename = secure_filename(image.filename)
+                image_path = os.path.join(UPLOAD_FOLDER, filename)
+                image.save(image_path)
+
+                
+                if post.image:
+                    old_image_path = os.path.join(UPLOAD_FOLDER, post.image)
+                    if os.path.exists(old_image_path):
+                        os.remove(old_image_path)
+
+                post.image = filename  
+                flash("File uploaded successfully!", category="success")
+            except Exception as e:
+                flash(f"Error while uploading file: {e}", category="error")
+
+        db.session.commit()
+        flash("Post updated successfully!", category="success")
+        return redirect(url_for("view.home"))
+
+    return render_template("edit_post.html", user=current_user, post=post)
 @views.route("/posts/<username>")
 @login_required
 def posts(username):

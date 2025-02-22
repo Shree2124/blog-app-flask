@@ -26,12 +26,18 @@
                   <li>
                     <a href="/delete-post/{{ post.id }}" class="dropdown-item">Delete</a>
                   </li>
+                  <li>
+                    <a href="/edit-post/{{ post.id }}" class="dropdown-item">Edit</a>
+                  </li>
                 </ul>
               </div>
             {% endif %}
           </div>
         </div>
         <div class="card-body">
+          {% if post.image %}
+            <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="img-fluid" />
+          {% endif %}
           <div class="card-text">{{ post.text }}</div>
           <br />
           <div class="collapse" id="comments-{{ post.id }}">

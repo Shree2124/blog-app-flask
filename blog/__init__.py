@@ -14,8 +14,14 @@ DB_NAME = "database.db"
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = "helloworld"
+    
     print(os.getenv("DATABASE_URL"))
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
+    upload_folder = 'blog/static/uploads'
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+    
+    app.config['UPLOAD_FOLDER'] = upload_folder
     db.init_app(app)
 
     from .views import views

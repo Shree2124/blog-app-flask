@@ -16,14 +16,13 @@
         <p><b>Current Image:</b></p>
         <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="img-fluid rounded" alt="Post Image" width="300" />
         <br />
-        <!-- Checkbox to remove current image -->
         <input type="checkbox" name="remove_image" id="remove_image" value="true" />
         <label for="remove_image">Remove current image</label>
         <br />
       </div>
     {% endif %}
   
-    <!-- File input for new image upload -->
+
     <div class="mb-3">
       <label for="image"><b>Upload New Image:</b></label>
       <input type="file" name="image" id="image" class="form-control" accept="image/*" />

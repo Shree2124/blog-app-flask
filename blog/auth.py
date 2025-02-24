@@ -201,7 +201,7 @@ def forgot_password():
                 mail.send(msg)
                 
                 flash("Password reset instructions sent to your email.", category="success")
-                return redirect(url_for("view.login"))
+                return redirect(url_for("auth.login"))
             else:
                 flash('Email not found.', category='error')
         except Exception as e:
